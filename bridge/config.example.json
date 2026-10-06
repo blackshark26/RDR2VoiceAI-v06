@@ -1,0 +1,24 @@
+{
+  "api_key": "PUT_YOUR_GEMINI_API_KEY_HERE",
+  "model": "gemini-3.8-live",
+  "input_device": null,
+  "conversation_timeout_sec": 30,
+  "language_profile": "ar-MA",
+  "default_role": "Civilian",
+  "personality_profile": "friendly",
+  "max_reply_sentences": 2,
+  "auto_reload_data": true,
+  "paths": {
+    "prompts": "Prompts",
+    "languages": "Languages",
+    "personalities": "Personalities",
+    "world": "World",
+    "actions": "Actions"
+  },
+  "male_voice": "Orus",
+  "female_voice": "Kore",
+  "npc_max_distance": 5.0,
+  "barge_in_enabled": true,
+  "barge_in_keep_session_memory": true,
+  "interrupt_playback_immediately": true
+}

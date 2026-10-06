@@ -1,0 +1,7 @@
+; RDR2VoiceAI.ini - put next to RDR2VoiceAI.asi
+; Edit keys as needed (single letter)
+
+ptt_key=U
+cancel_key=X
+npc_max_distance=4.5
+conversation_timeout_sec=30

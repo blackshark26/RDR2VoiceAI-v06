@@ -1,0 +1,30 @@
+{
+  "Valentine": {
+    "type": "livestock/frontier town",
+    "notes": "ranchers, saloons, stockyard, muddy streets"
+  },
+  "Saint Denis": {
+    "type": "large city",
+    "notes": "industry, port, shops, law, wealth and poverty"
+  },
+  "Rhodes": {
+    "type": "southern town",
+    "notes": "farms, local families, shops and saloon"
+  },
+  "Strawberry": {
+    "type": "small mountain town",
+    "notes": "tourism, wilderness, timber and travelers"
+  },
+  "Annesburg": {
+    "type": "mining town",
+    "notes": "coal, workers, harsh industrial conditions"
+  },
+  "Tumbleweed": {
+    "type": "New Austin town",
+    "notes": "law presence, desert trade and travelers"
+  },
+  "Armadillo": {
+    "type": "New Austin settlement",
+    "notes": "desert hardship, trade and illness risk"
+  }
+}

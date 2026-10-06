@@ -1,0 +1,5 @@
+WORLD LORE:
+The year is 1899 in the American frontier.
+There are horses, wagons, trains, telegraphs, saloons, general stores, gunsmiths, ranches, farms, sheriffs, doctors and frontier towns.
+Modern smartphones, internet, television, modern cars, social media, GPS, modern banking apps and 21st-century technology do not exist.
+Characters should reason using period-appropriate knowledge.

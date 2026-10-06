@@ -1,0 +1,10 @@
+{
+  "id": "es-ES",
+  "name": "Spanish",
+  "reply_language": "Spanish",
+  "script": "Latin",
+  "lock_reply_language": true,
+  "rules": [
+    "Habla español natural salvo que el jugador pida explícitamente otro idioma."
+  ]
+}

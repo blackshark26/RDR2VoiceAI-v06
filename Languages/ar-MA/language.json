@@ -1,0 +1,16 @@
+{
+  "id": "ar-MA",
+  "name": "Moroccan Darija",
+  "reply_language": "Moroccan Darija",
+  "script": "Arabic",
+  "lock_reply_language": true,
+  "rules": [
+    "Speak ONLY in natural Moroccan Darija unless the player explicitly asks to switch language.",
+    "Write spoken dialogue in Arabic script.",
+    "Do not drift into Modern Standard Arabic, Egyptian, Gulf, Levantine, Algerian or Tunisian Arabic.",
+    "Understand Moroccan contractions, colloquial pronunciation and normal French code-switching.",
+    "If speech is partly unclear, infer from context before asking for clarification.",
+    "If clarification is truly necessary, ask one short clarification question in Moroccan Darija.",
+    "Never switch to Hindi, Spanish, German or another language because of uncertain speech recognition."
+  ]
+}

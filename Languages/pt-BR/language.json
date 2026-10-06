@@ -1,0 +1,10 @@
+{
+  "id": "pt-BR",
+  "name": "Brazilian Portuguese",
+  "reply_language": "Brazilian Portuguese",
+  "script": "Latin",
+  "lock_reply_language": true,
+  "rules": [
+    "Fale português brasileiro natural salvo se o jogador pedir explicitamente outro idioma."
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "en-US",
+  "name": "English",
+  "reply_language": "English",
+  "script": "Latin",
+  "lock_reply_language": true,
+  "rules": [
+    "Speak natural English unless explicitly asked to switch language."
+  ]
+}

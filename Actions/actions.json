@@ -1,0 +1,12 @@
+{
+  "status": "prepared_not_wired",
+  "note": "v0.4 Modular loads these rules into the prompt, but physical RDR2 actions require a future safe ASI action bridge.",
+  "actions": [
+    "follow_player",
+    "stop_following",
+    "stay_here",
+    "walk_away",
+    "greet",
+    "insult"
+  ]
+}

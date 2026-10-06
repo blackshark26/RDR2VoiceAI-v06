@@ -1,0 +1,21 @@
+TROUBLESHOOTING
+===============
+- إذا Bridge تسد مباشرة: شغلو من CMD وشوف الخطأ، وتأكد config.json صالح.
+- إذا اللعبة تجمد مع U: تأكد أنك كتستعمل ASI SAFE المرفق بهاد المشروع.
+- إذا الدارجة ما كتتفهمش: زيد الكلمات اللي كتستعمل ف Languages/ar-MA/vocabulary.json.
+- إذا كيبدل اللغة: راجع Languages/ar-MA/language.json.
+- إذا عدلت ملفات خارجية وما تبدل السلوك: سالي المحادثة وعاود U؛ auto_reload_data يعاود session عند اكتشاف التعديل.
+
+
+v0.6 BARGE-IN:
+- إذا شدّيتي U أثناء كلام NPC وما توقفش الصوت:
+  شوف VoiceBridge.log وابحث على:
+  "BARGE-IN: local NPC playback interrupted"
+  و:
+  "Player interrupted NPC reply with U"
+
+- إذا المقاطعة خدامة ولكن NPC نسى الحوار:
+  تأكد أن log ما فيهش reconnect بين المقاطعة والجواب الجديد.
+  المقاطعة العادية خاصها تبقى في نفس Gemini Live session.
+
+- إذا وقع reconnect بسبب socket error، السياق القديم يمكن يضيع لأن الاتصال مات فعلاً.

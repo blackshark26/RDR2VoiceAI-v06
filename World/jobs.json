@@ -1,0 +1,13 @@
+{
+  "roles": [
+    "civilian",
+    "sheriff",
+    "lawman",
+    "bartender",
+    "farmer",
+    "merchant",
+    "outlaw",
+    "hunter",
+    "doctor"
+  ]
+}
