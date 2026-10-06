@@ -19,3 +19,14 @@ v0.6 BARGE-IN:
   المقاطعة العادية خاصها تبقى في نفس Gemini Live session.
 
 - إذا وقع reconnect بسبب socket error، السياق القديم يمكن يضيع لأن الاتصال مات فعلاً.
+
+
+v0.7 MICROPHONE:
+- فنافذة Bridge شوف:
+  Selected Windows/default microphone: [ID] NAME
+- المايك المختار عليه >> في قائمة Available microphone/input devices.
+- إذا المايك غلط:
+  Windows Settings -> System -> Sound -> Input
+  اختار الميكروفون الصحيح، سد Bridge وشغلو من جديد.
+- إذا Windows default ما تبدلش عند PortAudio، تقدر تحط ID يدوياً في config.json:
+  "input_device": 5

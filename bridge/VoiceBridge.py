@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RDR2VoiceAI VoiceBridge v0.6 BARGE-IN MEMORY
+RDR2VoiceAI VoiceBridge v0.8 INTERACTIVE ROLEPLAY
 
 Main behavior:
 - Hold U to speak.
@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import sounddevice as sd
+import numpy as np
 from google import genai
 from google.genai import types
 
@@ -308,12 +309,126 @@ CURRENT NPC CONTEXT:
         )
 
 
+
+# ---------------------------------------------------------------------------
+# Windows/default microphone selection + light preprocessing
+# ---------------------------------------------------------------------------
+def list_input_devices():
+    devices = sd.query_devices()
+    result = []
+    for idx, dev in enumerate(devices):
+        try:
+            max_in = int(dev.get("max_input_channels", 0))
+        except Exception:
+            max_in = 0
+        if max_in > 0:
+            result.append((idx, dev))
+    return result
+
+
+def resolve_input_device(cfg):
+    """
+    Default behavior:
+    - If config input_device is null and use_windows_default_microphone=true,
+      use PortAudio/sounddevice's current default Windows input device.
+    - If config explicitly specifies an integer index, use that index.
+    """
+    explicit = cfg.get("input_device", None)
+    use_default = bool(cfg.get("use_windows_default_microphone", True))
+
+    if explicit is not None:
+        try:
+            idx = int(explicit)
+            dev = sd.query_devices(idx, "input")
+            return idx, str(dev.get("name", f"Device {idx}"))
+        except Exception as e:
+            log.warning("Configured input_device=%r is invalid: %s", explicit, e)
+
+    if use_default:
+        try:
+            default_pair = sd.default.device
+            idx = int(default_pair[0])
+            if idx >= 0:
+                dev = sd.query_devices(idx, "input")
+                return idx, str(dev.get("name", f"Device {idx}"))
+        except Exception as e:
+            log.warning("Could not resolve Windows/default input device: %s", e)
+
+    # Final fallback: first available input device.
+    inputs = list_input_devices()
+    if not inputs:
+        raise RuntimeError("No recording/input microphone was found.")
+    idx, dev = inputs[0]
+    return idx, str(dev.get("name", f"Device {idx}"))
+
+
+def print_audio_devices(selected_idx):
+    print("Available microphone/input devices:")
+    log.info("=== Available Audio Input Devices ===")
+    for idx, dev in list_input_devices():
+        name = str(dev.get("name", "Unknown"))
+        channels = int(dev.get("max_input_channels", 0))
+        prefix = ">>" if idx == selected_idx else "  "
+        print(f"{prefix} [{idx}] {name} (input channels: {channels})")
+        log.info(
+            "Device %d: %s (Channels: %d)%s",
+            idx, name, channels,
+            " [SELECTED]" if idx == selected_idx else ""
+        )
+    log.info("=====================================")
+
+
+def preprocess_pcm16(raw: bytes, cfg: dict) -> bytes:
+    """
+    Very light processing intended for speech recognition:
+    - remove DC offset
+    - gentle gain only when signal is quiet
+    - do NOT hard-gate normal speech
+    - preserve int16 mono PCM
+    """
+    p = cfg.get("mic_preprocessing", {})
+    if not p or not p.get("enabled", True) or not raw:
+        return raw
+
+    try:
+        samples = np.frombuffer(raw, dtype=np.int16).astype(np.float32)
+        if samples.size == 0:
+            return raw
+
+        # Normalize to [-1,1]
+        samples /= 32768.0
+
+        if p.get("dc_remove", True):
+            samples -= float(np.mean(samples))
+
+        rms = float(np.sqrt(np.mean(samples * samples) + 1e-12))
+        noise_floor = float(p.get("noise_floor_rms", 0.003))
+
+        # Never delete low-level chunks: that can clip beginnings/endings of Darija words.
+        # Only apply gentle gain when speech is above the tiny ambient-noise floor.
+        if p.get("gentle_auto_gain", True) and rms > noise_floor:
+            target = float(p.get("target_rms", 0.10))
+            max_gain = float(p.get("max_gain", 3.0))
+            gain = min(max_gain, max(1.0, target / max(rms, 1e-6)))
+            samples *= gain
+
+        # Soft safety limit
+        samples = np.clip(samples, -0.98, 0.98)
+        out = (samples * 32767.0).astype(np.int16)
+        return out.tobytes()
+
+    except Exception as e:
+        log.debug("Mic preprocessing skipped after error: %s", e)
+        return raw
+
+
 # ---------------------------------------------------------------------------
 # Continuous microphone
 # ---------------------------------------------------------------------------
 class Mic:
-    def __init__(self, device=None):
+    def __init__(self, device=None, cfg=None):
         self.device = device
+        self.cfg = cfg or {}
         self.q = queue.Queue(maxsize=1024)
         self.stream = None
 
@@ -322,7 +437,7 @@ class Mic:
             log.debug("Mic status: %s", status)
 
         try:
-            self.q.put_nowait(bytes(indata))
+            self.q.put_nowait(preprocess_pcm16(bytes(indata), self.cfg))
         except queue.Full:
             try:
                 self.q.get_nowait()
@@ -330,7 +445,7 @@ class Mic:
                 pass
 
             try:
-                self.q.put_nowait(bytes(indata))
+                self.q.put_nowait(preprocess_pcm16(bytes(indata), self.cfg))
             except queue.Full:
                 pass
 
@@ -380,6 +495,79 @@ class Mic:
 
         return chunks
 
+
+
+# ---------------------------------------------------------------------------
+# Voice command -> in-game action mapping
+# ---------------------------------------------------------------------------
+def normalize_spoken_text(text: str) -> str:
+    text = (text or "").lower().strip()
+    replacements = {
+        "أ": "ا", "إ": "ا", "آ": "ا",
+        "ى": "ي", "ؤ": "و", "ئ": "ي",
+        "ـ": "",
+    }
+    for a, b in replacements.items():
+        text = text.replace(a, b)
+    for ch in "،,.!?؛:()[]{}\"'":
+        text = text.replace(ch, " ")
+    return " ".join(text.split())
+
+
+def load_action_phrases():
+    cfg = load_json(ROOT / "Actions" / "voice_commands.json", {"enabled": False})
+    actions = cfg.get("actions", {})
+    result = {}
+    for action_name, spec in actions.items():
+        result[action_name] = [
+            normalize_spoken_text(p)
+            for p in spec.get("phrases", [])
+            if str(p).strip()
+        ]
+    return cfg, result
+
+
+def detect_explicit_action(transcript: str):
+    cfg, phrases = load_action_phrases()
+    if not cfg.get("enabled", True):
+        return None
+
+    t = normalize_spoken_text(transcript)
+    if not t:
+        return None
+
+    # Order matters: stop_dance before dance.
+    order = [
+        "stop_dance",
+        "follow",
+        "stay",
+        "dance",
+        "face_player",
+        "wave",
+    ]
+    for action in order:
+        for phrase in phrases.get(action, []):
+            if phrase and phrase in t:
+                return action
+    return None
+
+
+def dispatch_game_action(action: str, npc: int):
+    if not action or not npc:
+        return
+    mapping = {
+        "follow": "ACTION_FOLLOW",
+        "stay": "ACTION_STAY",
+        "dance": "ACTION_DANCE",
+        "stop_dance": "ACTION_STOP_DANCE",
+        "face_player": "ACTION_FACE_PLAYER",
+        "wave": "ACTION_WAVE",
+    }
+    command = mapping.get(action)
+    if command:
+        append_command(command, npc)
+        log.info("Voice action dispatched: %s npc=%s", action, npc)
+        print(f"[*] Action: {action}")
 
 # ---------------------------------------------------------------------------
 # Gemini Live session
@@ -637,6 +825,8 @@ class LiveBridge:
 
         self.playback_interrupted = False
         transcript = []
+        player_transcript = []
+        executed_action = None
         first_audio = False
         last_pulse = time.monotonic()
 
@@ -665,6 +855,20 @@ class LiveBridge:
 
                 if not server:
                     continue
+
+                # Live input-audio transcription: use ONLY explicit commands for actions.
+                input_tx = getattr(server, "input_transcription", None)
+                if input_tx and getattr(input_tx, "text", None):
+                    piece = input_tx.text
+                    player_transcript.append(piece)
+                    joined_player = " ".join(player_transcript).strip()
+                    log.info("Player transcript(partial): %s", joined_player[:500])
+
+                    if executed_action is None:
+                        action = detect_explicit_action(joined_player)
+                        if action:
+                            dispatch_game_action(action, npc)
+                            executed_action = action
 
                 # Gemini can explicitly tell us that this model turn was interrupted.
                 if getattr(server, "interrupted", False):
@@ -791,6 +995,12 @@ class LiveBridge:
                 npc,
             )
 
+        if player_transcript:
+            log.info(
+                "PLAYER transcript: %s",
+                " ".join(player_transcript).strip()[:500],
+            )
+
         if transcript:
             log.info(
                 "NPC transcript: %s",
@@ -834,9 +1044,21 @@ async def main():
 
     data = DataPack(cfg)
     bridge = LiveBridge(cfg, data)
-    mic = Mic(
-        cfg.get("input_device", None)
+
+    selected_input_index, selected_input_name = resolve_input_device(cfg)
+    mic = Mic(selected_input_index, cfg)
+
+    print("=" * 72)
+    print("RDR2 Voice AI - Microphone")
+    print(f"Selected Windows/default microphone: [{selected_input_index}] {selected_input_name}")
+    log.info(
+        "Selected Windows/default microphone: index=%d name=%s",
+        selected_input_index,
+        selected_input_name,
     )
+
+    if cfg.get("show_audio_devices_on_start", True):
+        print_audio_devices(selected_input_index)
 
     offset = (
         EVENTS_PATH.stat().st_size
@@ -856,7 +1078,7 @@ async def main():
 
     print("=" * 72)
     print(
-        "RDR2 Voice AI Bridge v0.6 BARGE-IN MEMORY"
+        "RDR2 Voice AI Bridge v0.8 INTERACTIVE ROLEPLAY"
     )
     print(
         "Press/Hold U at any time - even while the NPC is talking."
@@ -870,7 +1092,7 @@ async def main():
     print("=" * 72)
 
     log.info(
-        "v0.6 Barge-In Memory started"
+        "v0.8 Interactive Roleplay started"
     )
 
     try:
@@ -1140,7 +1362,7 @@ async def main():
         await bridge.close()
 
         log.info(
-            "v0.6 Barge-In Memory stopped"
+            "v0.8 Interactive Roleplay stopped"
         )
 
 

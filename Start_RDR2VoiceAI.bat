@@ -1,7 +1,7 @@
 @echo off
-title RDR2 Voice AI v0.6 Barge-In Memory
+title RDR2 Voice AI v0.8 Interactive Roleplay
 cd /d "%~dp0"
-echo Starting RDR2 Voice AI v0.6 Barge-In Memory...
+echo Starting RDR2 Voice AI v0.8 Interactive Roleplay...
 echo.
 if not exist "config.json" (
   echo ERROR: config.json was not found next to this file.

@@ -1,0 +1,64 @@
+{
+  "enabled": true,
+  "execute_only_on_explicit_command": true,
+  "actions": {
+    "follow": {
+      "phrases": [
+        "تبعني",
+        "تبعني معايا",
+        "جي معايا",
+        "سير معايا",
+        "خليك معايا",
+        "follow me",
+        "come with me"
+      ]
+    },
+    "stay": {
+      "phrases": [
+        "بقا هنا",
+        "وقف هنا",
+        "تسنا هنا",
+        "خليك هنا",
+        "stay here",
+        "wait here"
+      ]
+    },
+    "dance": {
+      "phrases": [
+        "رقص",
+        "رقص ليا",
+        "دير شي رقصة",
+        "وريني شي رقصة",
+        "dance",
+        "dance for me"
+      ]
+    },
+    "stop_dance": {
+      "phrases": [
+        "وقف الرقص",
+        "حبس الرقص",
+        "صافي ما تبقاش ترقص",
+        "stop dancing",
+        "stop dance"
+      ]
+    },
+    "face_player": {
+      "phrases": [
+        "شوف فيا",
+        "دور ليا",
+        "واجهني",
+        "بقا كتشوف فيا",
+        "look at me",
+        "face me"
+      ]
+    },
+    "wave": {
+      "phrases": [
+        "لوح ليا",
+        "سلم عليا بيدك",
+        "wave",
+        "wave at me"
+      ]
+    }
+  }
+}

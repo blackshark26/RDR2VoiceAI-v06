@@ -1,4 +1,4 @@
-// RDR2VoiceAI v0.6 BARGE-IN MEMORY
+// RDR2VoiceAI v0.8 INTERACTIVE ROLEPLAY
 // Nearest-human targeting without worldGetAllPeds.
 // Uses GET_PED_NEARBY_PEDS and only a small verified native set.
 
@@ -112,6 +112,94 @@ static void releaseNpc() {
     g_conversationActive = false;
 }
 
+
+static bool waitAnimDict(const char* dict, DWORD timeoutMs = 1200) {
+    STREAMING::REQUEST_ANIM_DICT(dict);
+    DWORD start = GetTickCount();
+    while (!STREAMING::HAS_ANIM_DICT_LOADED(dict)) {
+        WAIT(0);
+        if (GetTickCount() - start > timeoutMs) return false;
+    }
+    return true;
+}
+
+static void playConversationGesture(Ped ped) {
+    if (!ped || !ENTITY::DOES_ENTITY_EXIST(ped)) return;
+
+    PED::SET_PED_CAN_PLAY_GESTURE_ANIMS(ped, TRUE, 0);
+
+    const bool male = PED::IS_PED_MALE(ped);
+    const DWORD variant = (GetTickCount() / 3000) % 3;
+
+    const char* dict = nullptr;
+    const char* anim = nullptr;
+
+    if (male) {
+        dict = "ai_gestures@gen_male@standing@speaker";
+        if (variant == 0) anim = "neutral_wave_fl_001";
+        else if (variant == 1) anim = "neutral_wave_fl_001";
+        else anim = "neutral_wave_fl_001";
+    } else {
+        dict = "ai_gestures@gen_female@standing@speaker";
+        if (variant == 0) anim = "neutral_get_attention_l_001";
+        else if (variant == 1) anim = "neutral_get_attention_l_001";
+        else anim = "neutral_get_attention_l_001";
+    }
+
+    if (dict && anim && waitAnimDict(dict)) {
+        // Upper-body style flag so feet remain planted and interaction stays stable.
+        TASK::TASK_PLAY_ANIM(ped, dict, anim, 4.0f, -4.0f, 1800, 24, 0.0f);
+    }
+}
+
+static void actionFollow(Ped ped) {
+    if (!ped || !ENTITY::DOES_ENTITY_EXIST(ped)) return;
+    Ped player = PLAYER::PLAYER_PED_ID();
+    TASK::CLEAR_PED_TASKS(ped);
+    TASK::TASK_FOLLOW_TO_OFFSET_OF_ENTITY(
+        ped, player,
+        0.8f, -1.4f, 0.0f,
+        2.0f, -1, 1.8f, TRUE
+    );
+    logLine("ACTION follow ped=" + std::to_string((int)ped));
+}
+
+static void actionStay(Ped ped) {
+    if (!ped || !ENTITY::DOES_ENTITY_EXIST(ped)) return;
+    TASK::CLEAR_PED_TASKS(ped);
+    TASK::TASK_STAND_STILL(ped, -1);
+    Ped player = PLAYER::PLAYER_PED_ID();
+    TASK::TASK_LOOK_AT_ENTITY(ped, player, 5000, 2048, 3, 0);
+    logLine("ACTION stay ped=" + std::to_string((int)ped));
+}
+
+static void actionDance(Ped ped) {
+    if (!ped || !ENTITY::DOES_ENTITY_EXIST(ped)) return;
+    TASK::CLEAR_PED_TASKS(ped);
+    Hash scenario = MISC::GET_HASH_KEY("WORLD_HUMAN_DANCING");
+    TASK::START_SCENARIO_IN_PLACE(ped, scenario, -1);
+    logLine("ACTION dance ped=" + std::to_string((int)ped));
+}
+
+static void actionStopDance(Ped ped) {
+    if (!ped || !ENTITY::DOES_ENTITY_EXIST(ped)) return;
+    TASK::CLEAR_PED_TASKS(ped);
+    keepNpcEngaged(ped, 5000);
+    logLine("ACTION stop_dance ped=" + std::to_string((int)ped));
+}
+
+static void actionFacePlayer(Ped ped) {
+    if (!ped || !ENTITY::DOES_ENTITY_EXIST(ped)) return;
+    keepNpcEngaged(ped, 5000);
+    logLine("ACTION face_player ped=" + std::to_string((int)ped));
+}
+
+static void actionWave(Ped ped) {
+    if (!ped || !ENTITY::DOES_ENTITY_EXIST(ped)) return;
+    playConversationGesture(ped);
+    logLine("ACTION wave ped=" + std::to_string((int)ped));
+}
+
 static void processBridgeCommands() {
     std::ifstream f(commandsPath());
     if (!f) return;
@@ -129,6 +217,7 @@ static void processBridgeCommands() {
                 g_activePed = (Ped)ped;
                 g_conversationActive = true;
                 keepNpcEngaged(g_activePed, 5000);
+                playConversationGesture(g_activePed);
             }
         } else if (line.rfind("NPC_SPEAK_PULSE|", 0) == 0) {
             int ped = atoi(line.substr(16).c_str());
@@ -138,6 +227,24 @@ static void processBridgeCommands() {
         } else if (line.rfind("NPC_RELEASE|", 0) == 0) {
             int ped = atoi(line.substr(12).c_str());
             if (!ped || ped == g_activePed) releaseNpc();
+        } else if (line.rfind("ACTION_FOLLOW|", 0) == 0) {
+            int ped = atoi(line.substr(14).c_str());
+            actionFollow((Ped)ped);
+        } else if (line.rfind("ACTION_STAY|", 0) == 0) {
+            int ped = atoi(line.substr(12).c_str());
+            actionStay((Ped)ped);
+        } else if (line.rfind("ACTION_DANCE|", 0) == 0) {
+            int ped = atoi(line.substr(13).c_str());
+            actionDance((Ped)ped);
+        } else if (line.rfind("ACTION_STOP_DANCE|", 0) == 0) {
+            int ped = atoi(line.substr(18).c_str());
+            actionStopDance((Ped)ped);
+        } else if (line.rfind("ACTION_FACE_PLAYER|", 0) == 0) {
+            int ped = atoi(line.substr(19).c_str());
+            actionFacePlayer((Ped)ped);
+        } else if (line.rfind("ACTION_WAVE|", 0) == 0) {
+            int ped = atoi(line.substr(12).c_str());
+            actionWave((Ped)ped);
         }
     }
     g_commandPos = f.tellg();
@@ -157,7 +264,7 @@ static void keyboardHandler(
 }
 
 static void ScriptMain() {
-    logLine("v0.6 BARGE-IN MEMORY ASI started");
+    logLine("v0.8 INTERACTIVE ROLEPLAY ASI started");
     emit("READY|0");
 
     // Start command reader at EOF so stale commands from older launches are ignored.

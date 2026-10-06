@@ -20,5 +20,18 @@
   "npc_max_distance": 5.0,
   "barge_in_enabled": true,
   "barge_in_keep_session_memory": true,
-  "interrupt_playback_immediately": true
+  "interrupt_playback_immediately": true,
+  "use_windows_default_microphone": true,
+  "show_audio_devices_on_start": true,
+  "mic_preprocessing": {
+    "enabled": true,
+    "dc_remove": true,
+    "gentle_auto_gain": true,
+    "target_rms": 0.1,
+    "max_gain": 3.0,
+    "noise_floor_rms": 0.003
+  },
+  "interactive_actions": true,
+  "roleplay_lock_1899": true,
+  "conversation_gestures": true
 }

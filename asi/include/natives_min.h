@@ -21,18 +21,32 @@ namespace PED {
     static BOOL IS_PED_HUMAN(Ped p) {
         return invoke<BOOL>(0xB980061DA992779DULL, p);
     }
-
-    // Correct RDR2 native hash.
     static BOOL IS_PED_MALE(Ped p) {
         return invoke<BOOL>(0x6D9F5FAA7488BA46ULL, p);
     }
-
     static BOOL IS_PED_DEAD_OR_DYING(Ped p, BOOL p1) {
         return invoke<BOOL>(0x3317DEDB88C95038ULL, p, p1);
     }
-
     static int GET_PED_NEARBY_PEDS(Ped ped, int* peds, int ignoredPedType, int p3) {
         return invoke<int>(0x23F8F5FC7E8C4A6BULL, ped, peds, ignoredPedType, p3);
+    }
+    static void SET_PED_CAN_PLAY_GESTURE_ANIMS(Ped ped, BOOL toggle, int p2) {
+        invoke<Void>(0xBAF20C5432058024ULL, ped, toggle, p2);
+    }
+}
+
+namespace MISC {
+    static Hash GET_HASH_KEY(const char* s) {
+        return invoke<Hash>(0xFD340785ADF8CFB7ULL, s);
+    }
+}
+
+namespace STREAMING {
+    static void REQUEST_ANIM_DICT(const char* dict) {
+        invoke<Void>(0xA862A2AD321F94B4ULL, dict);
+    }
+    static BOOL HAS_ANIM_DICT_LOADED(const char* dict) {
+        return invoke<BOOL>(0x27FF6FE8009B40CAULL, dict);
     }
 }
 
@@ -57,5 +71,33 @@ namespace TASK {
 
     static void CLEAR_PED_TASKS(Ped ped) {
         invoke<Void>(0xE1EF3C1216AFF2CDULL, ped);
+    }
+
+    static void TASK_FOLLOW_TO_OFFSET_OF_ENTITY(
+        Ped follower, Entity target,
+        float offsetX, float offsetY, float offsetZ,
+        float speed, int timeout, float stoppingRange, BOOL persistFollowing
+    ) {
+        invoke<Void>(0x304AE42E357B8C7EULL,
+            follower, target, offsetX, offsetY, offsetZ,
+            speed, timeout, stoppingRange, persistFollowing);
+    }
+
+    static void START_SCENARIO_IN_PLACE(
+        Ped ped, Hash scenarioHash, int duration = -1
+    ) {
+        invoke<Void>(0x524B54361229154FULL,
+            ped, scenarioHash, duration, TRUE, FALSE, FALSE, 1.0f, FALSE);
+    }
+
+    static void TASK_PLAY_ANIM(
+        Ped ped, const char* dict, const char* anim,
+        float blendIn, float blendOut, int duration,
+        int flags, float playbackRate = 0.0f
+    ) {
+        invoke<Void>(0xEA47FE3719165B94ULL,
+            ped, dict, anim,
+            blendIn, blendOut, duration, flags, playbackRate,
+            0, 0, 0, 0, 0);
     }
 }
