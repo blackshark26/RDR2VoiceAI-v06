@@ -1,0 +1,72 @@
+name: Build RDR2VoiceAI v0.6 Barge-In Memory
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build SAFE ASI
+        shell: cmd
+        run: msbuild asi\RDR2VoiceAI.vcxproj /m /p:Configuration=Release /p:Platform=x64
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          architecture: "x64"
+
+      - name: Install Bridge dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r bridge/requirements.txt
+          python -m pip install pyinstaller
+
+      - name: Build VoiceBridge EXE
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --clean --onefile --console `
+            --name RDR2VoiceBridge `
+            --collect-all sounddevice `
+            --collect-all google.genai `
+            bridge/VoiceBridge.py
+
+      - name: Create ready package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force package | Out-Null
+
+          $asi = Get-ChildItem -Path asi -Recurse -Filter RDR2VoiceAI.asi | Select-Object -First 1
+          if (-not $asi) { throw "RDR2VoiceAI.asi was not produced." }
+
+          Copy-Item $asi.FullName package\RDR2VoiceAI.asi
+          Copy-Item asi\RDR2VoiceAI.ini.example package\RDR2VoiceAI.ini
+          Copy-Item dist\RDR2VoiceBridge.exe package\RDR2VoiceBridge.exe
+          Copy-Item bridge\config.example.json package\config.json
+          Copy-Item Start_RDR2VoiceAI.bat package\Start_RDR2VoiceAI.bat
+          Copy-Item README_AR.txt package\README_AR.txt
+          Copy-Item TROUBLESHOOTING_AR.txt package\TROUBLESHOOTING_AR.txt
+
+          Copy-Item Prompts package\Prompts -Recurse
+          Copy-Item Languages package\Languages -Recurse
+          Copy-Item Personalities package\Personalities -Recurse
+          Copy-Item World package\World -Recurse
+          Copy-Item Actions package\Actions -Recurse
+
+          Compress-Archive -Path package\* -DestinationPath RDR2VoiceAI_v0.6_BARGE_IN_MEMORY_READY.zip -Force
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: RDR2VoiceAI_v0.6_BARGE_IN_MEMORY_READY
+          path: RDR2VoiceAI_v0.6_BARGE_IN_MEMORY_READY.zip
+          if-no-files-found: error
